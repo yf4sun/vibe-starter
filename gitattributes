@@ -1,0 +1,17 @@
+# Normalize line endings: store LF in the repo, use the native
+# style (CRLF on Windows) in each person's working folder.
+* text=auto
+
+# Windows-only scripts must keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never convert or diff as text
+*.xlsx binary
+*.xls  binary
+*.docx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.zip  binary

@@ -1,0 +1,34 @@
+
+
+Goal:
+
+Prompt:
+
+Changes:
+
+Unrequested: None
+
+Tested:
+Not tested:
+
+Assisted-by:
+
+# ----------------------------------------------------------------------
+# Line 1: Summary, imperative mood, under 72 chars
+#         e.g. "Handle locked Excel files during export"
+# Leave line 2 blank.
+#
+# Goal:        What problem does this solve / what does it add?
+# Prompt:      What did you ask the AI for? Paraphrase; no secrets,
+#              client names, or long transcripts.
+# Changes:     What was changed, briefly.
+# Unrequested: Anything the AI changed that you did NOT ask for.
+#              Keep "None" only if that's true.
+# Tested:      What you actually ran or checked, and the result.
+# Not tested:  Known gaps. "Not run" is an honest, acceptable answer.
+# Assisted-by: AI tool used (Claude Code, Copilot, ChatGPT...), or
+#              delete the line if written by hand.
+#
+# Lines starting with # are removed automatically.
+# One logical change per commit.
+# ----------------------------------------------------------------------
