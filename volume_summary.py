@@ -9,8 +9,10 @@ reported as warnings, and any total that excludes them is marked with "*".
 Usage:
     python volume_summary.py                      # uses samples/turning_counts.csv
     python volume_summary.py path/to/counts.csv
+    python volume_summary.py --csv                # also save to output/<name>_summary.csv
 """
 
+import argparse
 import csv
 import sys
 from pathlib import Path
@@ -18,7 +20,10 @@ from pathlib import Path
 APPROACHES = ["NB", "SB", "EB", "WB"]
 MOVEMENTS = [("L", "left"), ("T", "through"), ("R", "right")]
 DEFAULT_INPUT = Path(__file__).parent / "samples" / "turning_counts.csv"
+OUTPUT_DIR = Path(__file__).parent / "output"
 MISSING = "n/a"
+NOTE_MISSING = "missing"
+NOTE_INCOMPLETE = "incomplete - excludes missing movements"
 
 
 def read_counts(path):
@@ -88,20 +93,61 @@ def print_table(header, rows):
     print()
 
 
+def write_csv(out_path, rows):
+    """Save the summary. rows: (level, item, volume or None, note)."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # utf-8-sig so Excel opens it with the right encoding.
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Level", "Item", "Volume", "Note"])
+        for level, item, volume, note in rows:
+            # Leave missing volumes blank so the column stays numeric in Excel.
+            writer.writerow([level, item, "" if volume is None else volume, note])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Summarize turning movement counts for one intersection."
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        default=DEFAULT_INPUT,
+        type=Path,
+        help="counts CSV (default: samples/turning_counts.csv)",
+    )
+    parser.add_argument(
+        "--csv",
+        action="store_true",
+        help="also save the summary to output/<input name>_summary.csv",
+    )
+    return parser.parse_args()
+
+
 def main():
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_INPUT
+    args = parse_args()
+    path = args.input
     if not path.exists():
         print(f"Input file not found: {path}", file=sys.stderr)
         sys.exit(1)
 
     counts, warnings = read_counts(path)
+    csv_rows = []
 
     # Movement volumes: NBL, NBT, NBR, SBL, ... WBR
-    movement_rows = [
-        (approach + code, fmt(counts[approach][code]))
-        for approach in APPROACHES
-        for code, _ in MOVEMENTS
-    ]
+    movement_rows = []
+    for approach in APPROACHES:
+        for code, _ in MOVEMENTS:
+            value = counts[approach][code]
+            movement_rows.append((approach + code, fmt(value)))
+            csv_rows.append(
+                (
+                    "Movement",
+                    approach + code,
+                    value,
+                    "" if value is not None else NOTE_MISSING,
+                )
+            )
 
     # Approach and intersection totals
     approach_rows = []
@@ -113,9 +159,15 @@ def main():
         subtotal, complete = total(values)
         any_incomplete |= not complete
         approach_rows.append((approach, fmt(subtotal, complete)))
+        csv_rows.append(
+            ("Approach", approach, subtotal, "" if complete else NOTE_INCOMPLETE)
+        )
 
     grand_total, complete = total(all_values)
     approach_rows.append(("Total", fmt(grand_total, complete)))
+    csv_rows.append(
+        ("Intersection", "Total", grand_total, "" if complete else NOTE_INCOMPLETE)
+    )
 
     print(f"Intersection volume summary: {path.name}\n")
     print_table("Movement", movement_rows)
@@ -123,6 +175,19 @@ def main():
 
     if any_incomplete:
         print("* Incomplete: total excludes movements with missing volumes.")
+
+    if args.csv:
+        out_path = OUTPUT_DIR / f"{path.stem}_summary.csv"
+        try:
+            write_csv(out_path, csv_rows)
+        except PermissionError:
+            # Usually means the file is open in Excel, which locks it.
+            print(
+                f"\nCould not save {out_path.name}: close it in Excel and run again.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"\nSaved summary to {out_path}")
 
     if warnings:
         print("\nWarnings:", file=sys.stderr)
